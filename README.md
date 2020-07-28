@@ -5,10 +5,13 @@ Autor: Benedikt Jensen, 5302211
 Ich habe die Zulassung für PiS im SoSe 2020 bei Herrn Herzberg erhalten.
 
 1. [Einleitung](#introduction)
+2. [Spielregeln](#rules)
+3. [Bedienungsanleitung](#manual)
+4. [Dateiübersicht](#overview)
 
 ## Einleitung <a name="introduction"></a>
 
-### Spielregeln
+### Spielregeln <a name="rules"></a>
 
 Weiß spielt traditionell immer zuerst. In der ersten Spielphase wird abwechselnd je ein Spielstein auf ein freies Feld 
 gesetzt, bis insgesamt je 9 Spielsteine eingesetzt wurden.<br>
@@ -27,13 +30,13 @@ Remis: Das Spiel endet auch, wenn dreimal hintereinander, die gleiche Abfolge vo
 wenn 20 Spielzüge gemacht wurden, ohne das sich eine Mühle gebildet hat. In beiden Fällen endet das Spiel mit 
 unentschieden.
 
-### Bedienungsanleitung
+### Bedienungsanleitung <a name="manual"></a>
 
 ![Screenshot](Screenshot.png)
 
 <Beschreiben Sie die Bedienung Ihres Programms.>
 
-### Dateiübersicht
+### Dateiübersicht <a name="overview"></a>
 
     \build.gradle
     \README.md
