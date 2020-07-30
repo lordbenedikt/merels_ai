@@ -90,7 +90,7 @@ jeder Farbe im Spiel
 - Suchtiefe des Alphabeta-Algorithmus (kann eingetragen werden)
 - Zeitlimit des Alphabeta-Algorithmus (kann eingetragen werden)
 
-##### Konsolenausgabe:
+#### Konsolenausgabe:
 In der Konsole wird nach jedem Zug eine Statistik zur Spielsituation inklusive einer Repräsentation des Spielfelds ausgegeben. Wird ein Test gestartet wird außerdem
 der zu wählende Zug angezeigt. Die Variable displayAlphaBetaEval im companion objet der Klasse Muehle, kann auf true
 gesetzt werden, um zusätzlich die Bewertung jedes Zuges bei Benutzung von "bestMove()" anzuzeigen.
@@ -136,7 +136,7 @@ von Kriterien oder wahlweise anhand der Monte-Carlo-Methode. Diese lässt sich i
 Rechenzeiten. 
 
 ##### Klasse Muehle:
-Die Klasse Muehle enthält die gesamte Spiel-Engine. Hier werden Züge berechnet, gespielt und Spielstellungen werden 
+Die Klasse Muehle enthält die gesamte Spiel-Engine. Hier werden Züge berechnet, gespielt und zu Spielstellungen werden 
 Stringrepräsentation gemacht. Die Klasse implementiert das Interface MuehleInterface. Ihre Parameter sind:
 - nodes: IntArray zweier Integerwerte, welche jeweils die Positionen der Spielsteine beider Spieler enthält.
 - sel: Die aktuelle Auswahl
@@ -208,7 +208,7 @@ Der Hashcode ergibt sich wie folgt:
 
     "11 ungenutzte Bits" + "die Anzahl der noch zu setzenden Spielsteine" + "die ersten 24 Bit der Positionsvariable des Gegners" + "die ersten 24 Bit der eigenen Positionsvariable"<br>
     0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0
-           ungenutzt     . avl = 9 .            opponent's tokens                  .                 own tokens
+           ungenutzt     | avl = 9 |            opponent's tokens                  |                 own tokens
 
 Da immer zuerst die gegnerischen Spielsteine genannt werden, ist es egal für welche Farbe die Bewertung eingespeichert wird.
 Sei es Weiß oder Schwarz, der aktive Spieler steht immer rechts. "Symmetrische" Spielsituationen müssen also nur einmal gespeichert werden.
