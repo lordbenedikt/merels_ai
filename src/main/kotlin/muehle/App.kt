@@ -14,7 +14,9 @@ class App {
 }
 
 fun main(args: Array<String>) {
-    val app = Javalin.create { config ->                  //setting up server
+
+    //setting up server
+    val app = Javalin.create { config ->
         config.addStaticFiles("/public")
     }.start(7070)
 
@@ -40,26 +42,18 @@ fun main(args: Array<String>) {
         ctx.result(m.toString())
     }
     app.get("/random") { ctx: Context ->
-
         m = m.play(m.randomMove())
         println(m.stats())
         ctx.result(m.toString())
     }
     app.get("/restart") { ctx: Context ->
+        m.emptyHashmap()
+        m.loadData("databasePermanent.txt")
+        val com = ctx.queryParam("com")!!.toInt()
+        Muehle.autoplay = com
         Muehle.maxDepth = 3
+        Muehle.timeLimit = 3000
         m = Muehle(IntArray(24), -1, 1, 18, 1)
-        println(m.stats())
-        ctx.result(m.toString())
-    }
-    app.get("/firstHuman") { ctx: Context ->
-        Muehle.maxDepth = 3
-        m = Muehle(IntArray(24), -1, 1, 18, 1)
-        println(m.stats())
-        ctx.result(m.toString())
-    }
-    app.get("/firstCom") { ctx: Context ->
-        Muehle.maxDepth = 3
-        m = Muehle(IntArray(24), -1, -1, 18, 1)
         println(m.stats())
         ctx.result(m.toString())
     }
@@ -99,30 +93,40 @@ fun main(args: Array<String>) {
         m.endgame()
         ctx.result(m.toString())
     }
-    app.get("/test1") { ctx: Context ->
-        Muehle.maxDepth = 1
-        m = test[0]
+    app.get("/test") { ctx: Context ->
+        m.emptyHashmap()
+        val num = ctx.queryParam("num")!!.toInt()
+        Muehle.maxDepth = num
+        Muehle.autoplay = 0
+        Muehle.monteCarlo = false
+        if (num==5) {
+            Muehle.timeLimit = -1
+            m.loadData("databaseTest5.txt")
+        }
+        else Muehle.timeLimit = 3000
+        m = test[num - 1]
         ctx.result(m.toString())
     }
-    app.get("/test2") { ctx: Context ->
-        Muehle.maxDepth = 2
-        m = test[1]
+    app.get("/setDepth") { ctx: Context ->
+        val depth = ctx.queryParam("depth")!!.toInt()
+        Muehle.maxDepth = depth
         ctx.result(m.toString())
     }
-    app.get("/test3") { ctx: Context ->
+    app.get("/timeLimit") { ctx: Context ->
+        Muehle.timeLimit = ctx.queryParam("limit")!!.toInt()
+        ctx.result(m.toString())
+    }
+    app.get("/monteCarlo") { ctx: Context ->
+        Muehle.monteCarlo = !Muehle.monteCarlo
+        ctx.result(m.toString())
+    }
+    fun settingsToDefault() {
+        Muehle.monteCarlo = false
+        Muehle.autoplay = -1
         Muehle.maxDepth = 3
-        m = test[2]
-        ctx.result(m.toString())
+        Muehle.timeLimit = 3000
+        Muehle.loadDatabase("databasePermanent.txt")
     }
-    app.get("/test4") { ctx: Context ->
-        Muehle.maxDepth = 4
-        m = test[3]
-        ctx.result(m.toString())
-    }
-    app.get("/test5") { ctx: Context ->
-        Muehle.maxDepth = 5
-        m = test[4]
-        ctx.result(m.toString())
-    }
+
 }
 

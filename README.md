@@ -8,6 +8,10 @@ Ich habe die Zulassung für PiS im SoSe 2020 bei Herrn Herzberg erhalten.
 2. [Spielregeln](#rules)
 3. [Bedienungsanleitung](#manual)
 4. [Dateiübersicht](#overview)
+5. [Spiel-Engine](#engine)
+6. [Tests](#tests)
+7. [Umsetzung der GUI](#gui)
+8. [Optionale Hinweise und Quellenangaben](#info)
 
 ## Einleitung <a name="introduction"></a>
 
@@ -34,174 +38,295 @@ unentschieden.
 
 ![Screenshot](Screenshot.png)
 
-<Beschreiben Sie die Bedienung Ihres Programms.>
+Das Spiel wird ausschließlich mit der Maus gesteuert. Durch Anklicken eines Spielsteins, wird dieser angewählt. Durch
+Klicken auf ein Spielfeld, wird der gewählte Spielstein auf dieses Feld gezogen, soweit gültig. Eingesetzt werden 
+Spielsteine durch Klicken auf ein freies Feld. Genommen werden Spielsteine durch Anklicken des jeweiligen Spielsteins.
+
+#### Rechtes Menü (für Nutzer):
+
+Ganz oben rechts steht einerseits die fällige Aktion und andererseits welche Farbe am Zug ist.
+
+##### Spielzug-Buttons:
+- Best Move: Berechnet und spielt den bestmöglichen Zug des aktuellen Spielers
+- Random: Macht einen zufälligen Zug
+- Undo: Macht den Spielverlauf bis einschließlich des letzen Zugs des menschlichen Spielers rückgangig.
+
+##### Unter New Game lässt sich ein neues Spiel starten: 
+- Human: Startet ein Spiel mit dem Menschen als Startspieler
+- Computer: Startet ein Spiel mit dem Computer als Startspieler
+- HumanVsHuman: Startet ein Spiel mit zwei menschlichen Spielern
+
+Bei Standardeinstellungen beginnt der menschliche Spieler. Wenn der Computerspieler an der Reihe ist, macht er seinen
+Zug automatisch.
+
+##### Unter Stats lassen sich Informationen zum Spiel herausfinden:
+- Anzahl an weißen Spielsteinen
+- Anzahl an schwarzen Spielsteinen
+- Evaluation der momentanen Spielsituation anhand von Kriterien
+
+#### Linkes Menü: (für Entwickler)
+
+Hier lassen sich diverse Einstellungen zur Spiele-Engine machen
+
+##### Transform:
+- Turn: Dreht das Spielfeld um 90° im Uhrzeigersinn
+- Mirror: Spiegelt das Spielfeld an der Vertikalen
+- Invert: Vertauscht inneren und äußeren Spielbrettring
+
+##### Database:
+- Calculate: Berechnet von der momentanen Situation ausgehend zufällige Züge und speichert sie in der Hashmap
+- Save Date: Speichert alle Hashmap-Einträge als Textdatei
+- Calculate Endgame: Berechnet die Endspieldatenbank, also Bewertungen für alle Positionen mit jeweils 3 Spielsteinen
+jeder Farbe im Spiel
+- Empty Hashmap: Löscht alle Einträge aus der Hashmap(nützlich um "bestMove()" mit spezifizierten Einstellungen zu testen)
+
+##### Test:
+- 1,2,3,4,5: Führt den jeweiligen Test aus
+- Stellenbewertung: Kriterien/MonteCarlo: Wechselt zwischen Stellenbewertung anhand von Kriterien oder Monte-Carlo-Methode
+
+##### Info:
+- Details zur "bestMove()" Berechnung
+- Anzahl an Einträgen in der Hashmap
+- Suchtiefe des Alphabeta-Algorithmus (kann eingetragen werden)
+- Zeitlimit des Alphabeta-Algorithmus (kann eingetragen werden)
+
+##### Konsolenausgabe:
+In der Konsole wird nach jedem Zug eine Statistik zur Spielsituation inklusive einer Repräsentation des Spielfelds ausgegeben. Wird ein Test gestartet wird außerdem
+der zu wählende Zug angezeigt. Die Variable displayAlphaBetaEval im companion objet der Klasse Muehle, kann auf true
+gesetzt werden, um zusätzlich die Bewertung jedes Zuges bei Benutzung von "bestMove()" anzuzeigen.
 
 ### Dateiübersicht <a name="overview"></a>
 
     \build.gradle
     \README.md
-    \bin\main\public\index.html
-    \bin\main\TicTacToe\App.kt
-    \bin\main\TicTacToe\T3.kt
-    \src\main\kotlin\TicTacToe\App.kt
-    \src\main\kotlin\TicTacToe\T3.kt
+    \Screenshot.png
+    \src\main\kotlin\muehle\App.kt
+    \src\main\kotlin\muehle\Muehle.kt
+    \src\main\kotlin\muehle\MuehleInterface.kt
     \src\main\resources\public\index.html
+    \src\main\resources\public\database.txt
+    \src\main\resources\public\databasePermanent.txt
+    \src\main\resources\public\databaseTest5.txt
+    \src\main\resources\public\script.js
+    \src\main\resources\public\images\ -> svg-files
 
     -------------------------------------------------------------------------------
     Language                     files          blank        comment           code
     -------------------------------------------------------------------------------
-    Markdown                         1             71              0            270
-    Kotlin                           3             27              3            113
-    HTML                             1             11             17             80
-    XML                              2              0              0             41
-    Gradle                           1              8             12             16
-    INI                              1              0              0             13
+    Kotlin                           4            119            190            662
+    HTML                             1              8              2            155
+    Markdown                         1             68              0            155
+    JavaScript                       1             10              7             70
+    Gradle                           1             11             16             18
     -------------------------------------------------------------------------------
-    SUM:                             9            117             32            533
+    SUM:                             8            216            215           1060
     -------------------------------------------------------------------------------
-~~~
+    (SVG-Dateien wurden ignoriert)
 
-**Hinweise zum Aufbau**
+## Spiel-Engine (ENG) <a name="engine"></a>
 
-* Die `<Spielbezeichnung>` ist zum Beispiel zu ersetzen mit "Vier gewinnt", "Mühle", "Dame" etc.
-* Geben Sie bitte Ihren Namen _und_ Ihre Matrikelnummer an. Ohne Matrikelnummer haben wir es unnötig schwer, Ihr Prüfungsergebnis zu melden.
-* Geben Sie unbedingt an, bei wem Sie wann Ihre Prüfungsvorleistung erhalten haben.
-* Es gibt Editoren, wie Visual Studio Code, für die Sie eine Erweiterung herunterladen können, damit Sie in einem Markdown-Dokument ein Inhaltsverzeichnis (_Table of Content_) einfügen und automatisch aktualisieren lassen können. Bitte fügen Sie ein Inhaltsverzeichnis ein. (Wenn Ihnen das nicht möglich ist, ist das unkritisch.)
-* Fügen Sie nur _einen_(!) Screenshot Ihrer Anwendung in Aktion ein. Bitte denken Sie daran, einen relativen Link wie gezeigt zu der Bilddatei zu verwenden!  
-* Ihre Anwendung sollte so selbstverständlich nutzbar sein, dass es eigentlich keiner Anleitung bedarf. Geben Sie sich bitte dennoch die Mühe, eine kurze Nutzungsanleitung zur Bedienung des Spiels zu schreiben. Dazu gehört nicht das Starten der Anwendung! Es geht um die Bedienung der Oberfläche.
-
-**Zur Dateiübersicht**
-
-Die Dateiübersicht erstellen Sie bitte automatisch und fügen sie entsprechend dem obigen Beispiel eingerückt ein. Die Einrückung sorgt dafür, dass der Text wie ein Codeblock behandelt und hervorgehoben wird.
-
-Wechseln Sie unter Windows mit `cd` in das Projektverzeichnis Ihrer Anwendung; im folgenden Beispiel heißt das Verzeichnis `TicTacToe`. Listen Sie alle Dateien mit `dir /S /B /A-D .` auf:
-
-~~~
-> dir /S /B /A-D .
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\build.gradle
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\README.md
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\bin\main\public\index.html
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\bin\main\TicTacToe\App.kt
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\bin\main\TicTacToe\T3.kt
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\src\main\kotlin\TicTacToe\App.kt
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\src\main\kotlin\TicTacToe\T3.kt
-C:\Users\Dominikus\GitTHM\JbX\TicTacToe\src\main\resources\public\index.html
-~~~
-
-Wenn Sie Linux oder MacOS verwenden, werden Sie die entsprechenden Befehle für die Kommandozeile sicher leicht herausfinden; es wird etwas in der Art von `ls -la` sein.
-
-Entfernen Sie aus der Auflistung händisch die Angabe des Pfadkopfs bis einschließlich des Projektnamens. Das ist übersichtlicher.
-
-    \build.gradle
-    \README.md
-    \bin\main\public\index.html
-    \bin\main\TicTacToe\App.kt
-    \bin\main\TicTacToe\T3.kt
-    \src\main\kotlin\TicTacToe\App.kt
-    \src\main\kotlin\TicTacToe\T3.kt
-    \src\main\resources\public\index.html
-
-Fügen Sie dieses Resultat in Ihre Dokumentation wie oben gezeigt ein. Sollten Sie Dateien dabei haben mit einem Pfad wie z.B. `\.gradle\...` oder auch `\.git\...`, dann beachten Sie: Diese Dateien gehören nicht zur Abgabe und sollten auch nicht gelistet werden. Das sind Dateien, die Gradle, die Versionsverwaltung oder auch die Entwicklungsumgebung anlegen, die uns nicht interessieren.
-
-**Zu den Lines of Code (LoC)**
-
-Fügen Sie darüber hinaus die mit `cloc .` erzeugte Übersicht zu den Lines of Code in Ihrer Dokumentation ein; achten Sie wieder auf die Einrückung. Infos zur `cloc` finden Sie in der Bewertungsdokumentation.
-
-> Die folgenden Kapitel orientieren sich in der Reihenfolge am Dokumentationsaufbau, so wie er in den Bewertungskriterien beschrieben ist.
-
-## Dokumentation zur Spiel-Engine (ENG)
-
-~~~
-## Spiel-Engine (ENG)
-
-Feature    | AB  | H+S | MC  | -   | B+I | Summe
+Feature    | AB  | H+S |K(MC)| eD  | B+I  | Summe
 -----------|-----|-----|-----|-----|------|----
-Umsetzung  | 120 | 100 | 100 |   0 | 66.6 |
+Umsetzung  | 120 | 100 | 100 | 130 | 66.6 |
 Gewichtung | 0.4 | 0.3 | 0.3 | 0.3 |  0.3 | 
-Ergebnis   |  48 |  30 |  30 |   0 |   20 | **128%**
+Ergebnis   |  48 |  30 |  30 |  39 |   20 | **167%**
 
-<Erläuterungen zur Ihrer Implementierung der Spiele-Engine>
+Meine Implementierung des Spiels Mühle mit KI benutzt den Alphabeta-Algorithmus in Kombination mit Stellenbewertung anhand
+von Kriterien oder wahlweise anhand der Monte-Carlo-Methode. Diese lässt sich im Menü aktivieren, führt aber zu längeren
+Rechenzeiten. 
 
-~~~
+##### Klasse Muehle:
+Die Klasse Muehle enthält die gesamte Spiel-Engine. Hier werden Züge berechnet, gespielt und Spielstellungen werden 
+Stringrepräsentation gemacht. Die Klasse implementiert das Interface MuehleInterface. Ihre Parameter sind:
+- nodes: IntArray zweier Integerwerte, welche jeweils die Positionen der Spielsteine beider Spieler enthält.
+- sel: Die aktuelle Auswahl
+- turn: Der aktive Spieler
+- avl: Insgesamt noch einzusetzende Spielsteine
+- phs: Die fällige Spielaktion(Insert/Move/Take = 1/0/-1)
+- last: Die unmittelbar vergangene Spielstellung. Existiert keine, so ist last = null
 
-Fügen Sie eine Kurzform der Bewertungstabelle für die Spiel-Engine ein, so wie oben gezeigt. Verwenden Sie folgende Abkürzungen: Minimax (M), Negamax (N), Alpha-Beta (AB), Hash-Map (H), Symmetrien (S), Kriterien (K), Monte-Carlo (M), eigene DB (eD), fremde DB (fD), Immutabilität (Im), Bitboards (B), Interface (I). Wenn ein "Plus" an Featuren erlaubt ist, verwenden Sie ein `+` zwischen den Abkürzungen.
+Für jede Spielaktion wird eines neues Objekt der Klasse Muehle erstellt. Das companion object enthält bleibende Variablen.
+"paths" ist ein Array von Maps, welche jedes von jedem Feld aus jeweils erreichbare Feld beschreibt. Dies dient zur
+Berechnung valider Züge.
 
-Ergänzen Sie die Dokumentation mit Erläuterungen zur Ihrer Implementierung: Wo ist was in welchen Dateien zu finden? Welche Besonderheiten zeichnen Ihren Code aus?
+##### Klasse App:
+Die http-Requests werden in der Klasse App verarbeitet. Hier befindet sich auch der Programmeinstieg, die Variable "m"
+welche eine Referenz auf das aktuelle Muehle Objekt ist wird erstellt, und Testszenarien werden definiert.
 
-Nehmen Sie diesen Teil der Dokumentation ernst. Die Spiel-Engine ist Ihr Herzstück.
+##### Alphabeta-Algorithmus:
+Dieser Algorithmus ist der Kern der Mühle KI. Er bewertet eine Spielposition durch Simulieren der kommenden Züge unter
+der Annahme, dass der Gegner immer den besten Zug macht. Der Unterschied zum Minimax Algorithmus ist,
+dass er irrelevante Abzweigungen im Spielbaum kappt und somit schnellere Berechnungsergebnisse liefert. Der Algorithmus
+orientiert sich am auf Wikipedia verfügbaren Pseudocode dazu. Die Suchtiefe des Algorithmus ist als Standard auf 3 gesetzt.
+Zusätzlich gibt es ein Zeitlimit von 3000ms, nach wessen Überschreitung die Berechnung vorzeitig beendet wird.<br>
+Weiß ist der maximierende Spieler, Schwarz der minimierende. Erreicht der Alphabeta-Algorithmus das Spielende, so wird die
+Stellenbewertung mit der verbleibenden Suchtiefe+1 (1 + maxDepth - depth) multipliziert. Dies garantiert, dass immer der
+schnellste Weg zum Sieg bzw. das längste Hinauszögern der Niederlage gewählt wird.
 
-## Dokumentation zu den Test-Szenarien
+##### Stellenbewertung anhand von Kriterien:
+Die Stellenbewertung geschieht durch Zählen der verfügbaren Spielsteine und Einser- und Zweierreihen, welche noch nicht
+blockiert wurden. Ein Game Over wird mit 100 000 Punkten für den Sieger bewertet. Jeder eigene Spielstein gewichtet 10 000
+Punkte. Jede Einserreihe ist 1 000 Punkte Wert. Eine Zweierreihe ist 3 000 Punkte Wert, wenn es sich um den aktiven Spieler
+handelt. Für den inaktiven Spieler ist sie nur 2 000 Punkte Wert. Das liegt daran, dass der Spieler, welcher zuerst eine
+Mühle schließt, den Gegenspieler davon abhalten kann, seine eigene Mühle zu bilden.<br>
+Die Summe all dieser Punkte, wobei für Schwarz immer der negative Gegenwert genommen wird, ergeben die Evaluation der
+Spielstellung.
 
-~~~
-## Tests (TST)
+##### Monte-Carlo-Methode: 
+Von der zu bewertenden Spielposition ausgehend, wird mit einer festen Anzahl von Wiederholungen ein
+komplett zufälliges Spiel bis zu einer bestimmten maximalen Anzahl an Zügen durchgeführt. Endet das zufällige Spiel mit
+einem Sieg, ist die Bewertung 100000. Endet sie mit einer Niederlage, so ist die Bewertung -100000. Unentschieden wird
+mit 0 bewertet. Die endgültige Bewertung der Spielposition ergibt sich, indem man die Bewertung aller Wiederholungen
+summiert und den Mittelwert berechnet. Gegen den Monte-Carlo Algorithmus lässt sich am besten auf Sichttiefe 1 oder 2
+spielen. Ab Sichttiefe 3 ist die Wartezeit zu lang. (Es handelt sich hier nicht, um die Monte-Carlo-Tree-Search, welche sich auf gut bewertete Spielbaum-Knoten
+konzentriert)<br>
+Als Standardeinstellung ist die Monte-Carlo-Methode abgestellt. Sie kann in der GUI eingeschalten werden, in welchem Fall
+sie die Stellenbewertung anhand von Kriterien ersetzt.
+
+##### Best Move
+Die Funktion "bestMove()" bewertet alle mit eine Zug erreichbaren Spielstellungen. Diese Bewertungen werden um eine relativ
+kleine Zahl zufällig verändert, um zu verändern, dass die KI immer auf die selbe Art spielt. Die zufällige Veränderung
+geschieht mit der selbst definierten Funktion "noise()". Der maximierende Spieler wählt
+die höchste Bewertung, der minimierende Spieler wählt die geringste. "bestMove()" hat den return type Move.
+
+##### Bitboards
+Das Programm verwendet Bitboards. Die Positionen der Spielsteine wird durch zwei Integerwerte, einer je Farbe, repräsentiert.
+Die ersten 24 Bits jedes Integers sind entweder "0" oder "1", wobei "1" bedeutet, dass ein Spielstein der jeweiligen Farbe
+an der jeweiligen Stelle liegt.<br>
+Diese Datenstruktur ermöglicht effiziente Berechnungen für z.B. die Stellenbewertung. Dazu werden bitweise logische Verknüpfungen
+der Positionsvariablen mit sich selbst, um bestimmte Stellen versetzt, und mit Filtern genutzt.
+
+##### Hashing
+Nach Bewertung einer Spielstellung mit Alphabeta, wird das Ergebnis in der Hashmap "hm" gespeichert. Berechnungen die mit
+aktivem Spieler Schwarz geschehen sind (bei welchen negative Werte guten Spielstellungen entsprechen) wird der Wert invertiert.
+Beim Auslesen der Bewertung wird dieses Invertieren gegebenenfalls rückgängig gemacht. Diese Anpassung des Werts macht es
+möglich, dass das Vertauschen der Farben keine zusätzlichen Bewertungen braucht. Zwei verschiedene Stellungen, welche sich
+einzig durch vertauschte Farben unterscheiden, werden als gleichwertig behandelt. Das ermöglicht fast eine Halbierung des
+benötigten Speichers. Als Datentyp des Hashkeys wir Long verwendet.
+
+Der Hashcode ergibt sich wie folgt:
+
+    "11 ungenutzte Bits" + "die Anzahl der noch zu setzenden Spielsteine" + "die ersten 24 Bit der Positionsvariable des Gegners" + "die ersten 24 Bit der eigenen Positionsvariable"<br>
+    0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 1 0
+           ungenutzt     . avl = 9 .            opponent's tokens                  .                 own tokens
+
+Da immer zuerst die gegnerischen Spielsteine genannt werden, ist es egal für welche Farbe die Bewertung eingespeichert wird.
+Sei es Weiß oder Schwarz, der aktive Spieler steht immer rechts. "Symmetrische" Spielsituationen müssen also nur einmal gespeichert werden.
+
+Es werden auch geometrische Symmetrien beachtet. Dabei wird Drehung, Spiegelung und Invertierung(Vertauschen des inneren und
+äußeren Spielbrettrings) beachtet. Insgesamt ergibt sich eine Verringerung der resultierenden Ergebnisse um den Faktor 16
+zuzüglich der Symmetrie durch verschiedene Spielfarben, also eine insgesamte Verringerung um ca. den Faktor 32.
+
+##### Datenbank
+Die vorhandene Datenbank "databasePermanent.txt" beinhaltet nur das Ende des Spiels. Wenn beide Spieler nur noch drei
+Spielsteine haben, ergeben sich die meisten Zugmöglichkeiten, da Springen erlaubt ist. Dadurch kann sich die Berechnung
+in die Länge ziehen. Das verhindert die Datenbank. Die Datenbank wurde mit der selbst definierten Funktion "endgame()" erstellt.<br>
+Zusätzlich zur Endspieldatenbank wird eine temporäre Datenbank "databaseTemporary.txt" erstellt. Diese dient allein Test-, und
+Veranschaulichungszwecken. Die temporäre Datenbank lässt sich über die GUI überschreiben.<br>
+Für Test 5 gibt es eine eigene Datenbank, welche nur die für den Test gebrauchten Daten enthält.
+
+##### Interface
+Im Interface MuehleInterface sind die wichtigsten Funktionen aufgelistet.
+
+## Tests (TST) <a name="tests"></a>
 
 Szenario |  1  |  2  |  3  |  4  |  5  | Summe
 ---------|-----|-----|-----|-----|-----|-------
-ok       |  X  |  -  |  X  |  -  |  -  | 0.4
+ok       |  X  |  X  |  X  |  X  |  X  | 1.0
 
 Die Tests werden wie folgt ausgeführt:
 
-<Beschreiben Sie, wie die Tests auszuführen sind.>
+Auf der linken Seite der GUI befinden sich diverse Buttons und Infos zum Programm. Unter Test lässt sich eine Nummer von
+1 bis 5 aussuchen, welche, gemäß der Angaben nummeriert, den jeweiligen Test starten. Vor Ausführung der Tests wird die
+Hashmap automatisch geleert, sodass die Berechnung erneut stattfindet, anstatt dass bestehende Ergebnisse herangezogen
+werden.
+
+Folgende Abbildung stellt das Spielfeld mit den nummerierten Feldern dar:
+
+    O--------1--------2
+    |  8-----9-----1O |
+    |  |  16-17-18 |  |
+    7--15-23    19-11-3
+    |  |  22-21-20 |  |
+    |  14----13----12 |
+    6--------5--------4
+
+Spielzüge werden in folgender Form in der Konsole ausgegeben: 
+    
+    Move: 0 -> 1 (8)
+    
+Das Beispiel repräsentiert einen Spielzug, bei welchem ein eigener Spielstein von Feld 0 auf Feld 1 gesetzt wird und
+ein gegnerischer Spielstein von Feld 8 aus dem Spiel genommen wird. Es ist anzumerken, dass die Standardeinstellung für
+die Sichttiefe des Alphabeta-Algorithmus 3 ist. Für die Tests wird sie jedoch auf die jeweils notwendige Tiefe gesetzt. 
+Es folgt eine Schilderung der 5 verfügbaren Tests.
+
+- Test 1: Spieler schwarz spielt den Gewinnzug, indem er einen eigenen Spielstein auf Feld 2 zieht. (Tiefe 1)
+- Test 2: Spieler schwarz sichert sich den Sieg im übernächsten Zug durch Bilden von 2 Zweierreihen. Weiß kann im
+Folgezug nur eine davon blockieren. (Tiefe 3)
+- Test 3: Spieler schwarz ist am Zug. Keiner der Spieler hat eine Zweierreihe. Durch geschickte Spielzüge erlangt
+schwarz erst zwei Zweierreihen und spielt dann den Gewinnzug. Entscheidend um den Sieg im überübernächsten Zug zu ermöglichen
+ist, dass im nächsten Zug zwei Zweierreihen gebildet werden können. Das widerum ist nur dann möglich, wenn in diesem Zug
+eine Zweierreihe gebildet wird und außerdem zwei sich überschneidende Einserreihen dabei gebildet werden. Es lässt sich 
+überprüfen, dass die KI zuverlässig einen solchen Zug wählt. (Tiefe 5)
+- Test 4: Spieler schwarz ist am Zug und verhindert eine unmittelbare Bedrohung durch Spieler weiß, indem er auf Feld
+          15 springt. (Tiefe 2)
+- Test 5: Spieler schwarz ist am Zug und verhindert eine Niederlage im übernächsten Zug des Gegners. Das ist nur möglich
+durch blockieren von Feld 9 oder 10. (Im Test wird immer Feld 10 blockiert. Dass liegt daran, dass obwohl 
+Blockieren von Feld 9 die Niederlage verhindert, dieser Spielzug schlechter bewertet wird.) (Tiefe 4)
+
+(Test 3 erfordert eine Sichttiefe von 5. In der Datenbank sind für Endspielsituationen Bewertungen mit Sichttiefe 3
+gespeichert. Speziell für den Test liegen allerdings Bewertungen mit Sichttiefe 3 vor. Es liegen allerdings nicht die
+Bewertungen aller möglichen Züge zwischen Beginn von Test 3 bis Spielende vor. Die Berechnung war sehr langwierig.)
 
 Die Testausführung protokolliert sich über die Konsole wie folgt:
 
-    <eingerückte Konsolenausgabe>
-~~~
+    - - - - - - - - - Test 1 - - - - - - - - -
+    B--------B--------O   active player: -1
+    |  O-----W-----O  |   phase: 0
+    |  |  O--O--O  |  |   available: 0
+    O--O--O     O--O--B   evaluation(criteria):   -15900
+    |  |  O--O--O  |  |   rows of 3: 0
+    |  O-----O-----O  |   rows of 2: 2
+    W--------W--------B   rows of 1: 1
+    Calculated Best Move: 1 -> 2 (5)
 
-* Füllen Sie die obige Tabelle aus dem Bewertungsdokument aus.
-* Ergänzen Sie die Beschreibung zur Ausführung der Tests.
-* Fügen Sie eingerückt die geforderte Ausgabe auf der Konsole ein.
+## Dokumentation der GUI <a name="gui"></a>
 
-## Dokumentation der GUI
-
-~~~
 ## Umsetzung der GUI
 
-<Erläutern Sie die technische Umsetzung der GUI>
-~~~
+Die GUI wurde mit HTML umgesetzt. Das Spielbrett sowie die Spielsteine wurden mit Inkscape erstellt und liegen als 
+SVG-Dateien vor. Sie sind per `<img src="Dateiname">` in die HTML-Datei eingebunden. Die Selektoren(grauer Schatten unter
+ausgewähltem Spielstein) hingegen liegen direkt als svg-Element in der Datei index.html vor. Sie werden per Javascript
+mit angepassten Koordinaten ins HTML eingefügt, undzwar 24 Stück - auf jedem Feld einer. Die meiste Zeit über sind sie
+unsichtbar. Nur bei Auswahl des Feldes wird der jeweilige Selektor sichtbar.<br>
+Die Selektoren sind wichtig für die Interaktion mit dem Spieler, denn das onclick-Event dient dem Spielen eines Zugs.
+Dabei wird ein http-Request verschickt, welches auch die jeweilige Feldnummer mitgibt.<br> 
+Auf ähnliche Weise funktionieren auch die Menübuttons und die Eingabe der Suchtiefe. Ein Request wird verschickt und der
+laufende Kotlin-Prozess führt die gegebenen Anweisungen aus. Der Javascript-Code sorgt dafür, dass keine 2 http-Requests
+auf einmal verschickt werden können. Bis zum Erhalten einer Antwort werden alle Interaktionen gesperrt.<br>
+Bei Erhalten der http-response werden außerdem diverse Teile des HTML verändert. Die Spielsteine werden korrekt platziert
+und die verschiedenen Anzeigen werden aktualisiert.
 
-Ihnen ist die Gestaltung dieses Abschnitts frei gestellt.
+## Optionale Hinweise und Quellenangaben <a name="info"></a>
 
-## Optionale Hinweise und Quellenangaben
-
-Der Abschnitt "Hinweise" ist optional (d.h. kein Muss). Allerdings sollten Sie hier dokumentieren und offenlegen, was wir zur Begutachtung und Bewertung Ihres Projekts wissen sollten. Gibt es Fälle, bei denen Ihr Programm merkwürdig reagiert oder Fehler produziert? Was auch immer: Legen Sie solche Probleme bitte offen und lassen Sie uns die Probleme nicht finden. Das schmälert sonst den Gesamteindruck.
-
-~~~
 ## Hinweise
 
-<Anmerkungen, die wichtig für die Begutachtung sind.>
-~~~
+Meine Umsetzung des Alphabeta-Algorithmus liefert bei Suchtiefe > 3 teilweise nicht schnell genug eine Lösung. Deshalb
+wird die Suchtiefe als Standard auf 3 gestellt. In der GUI lässt sich die Tiefe frei wählen, doch bei zu hohen zahlen
+könnte das Programm hängen bleiben. Um das zu verhindern ist auch eine maximale Rechenzeit einzustellen, nach Ablauf welcher
+auch bei unvollendeter Berechnung der vorläufige Best Move zurückgegeben wird. Als Nebenwirkung kann es in diesem Fall zu
+schwachen Zügen kommen.
 
-Im letzten Kapitel sind die von Ihnen verwendeten Quellen aufzuführen, sofern Sie das nicht innerhalb der entsprechenden Abschnitte an Ort und Stelle getan haben. 
-
-~~~
 ## Quellennachweis
 
-* <Quelle A>
-* <Quelle B>
-~~~
-
-Bitte geben Sie Links an, wann immer das bei einer Quellenangabe möglich und sinnvoll ist.
-
-## Abgabe
-
-> Benennen Sie Ihre `zip`-Datei nach Ihrem Nachnamen samt Matrikelnummer. Müsste ich eine Abgabe machen, so würde die Datei `Herzberg123456.zip` heißen.
-
-Das Projekt ist im `zip`-Format in Moodle hochzuladen -- beachten Sie die dort angegebene Deadline; Sie können bis zur Deadline Ihre Abgabe beliebig oft aktualisieren. Die Verzeichnisstruktur orientiert sich an den für Gradle üblichen Konventionen. Abzuliefern ist ein auf das Nötigste bereinigte Verzeichnis aus Quellcode, Dokumentation und eventuellen Tests. Die Ausführung der Anwendung muss mit `gradle run` zu starten sein.
-
-Sie dürfen selbstverständlich auch Ihren Programmcode mit Kommentaren und Anmerkungen versehen. Aber übertreiben Sie es nicht. Zuviel Dokumentation im Code schadet dem Überblick. Besser ist es oft, entscheidende Codeabschnitte im `README.md` zu besprechen und vorzustellen.
-
-## Tipps und Hinweise
-
-Mittlerweile haben wir einige Erfahrungen mit studentischen Abgaben gesammelt. Beherzigen Sie bitte die Hinweise und die Tipps:
-
-* Bitte verwenden Sie das `>` am Anfang eines Absatzes nur dann, wenn Sie den Absatz farblich aus einem guten Grund hervorheben wollen. Wenn jeder Absatz hervorgehoben wird, ist das Markdown-Dokument nicht sehr angenehm zu lesen.
-* Bitte verwenden Sie innerhalb Ihres Abgabeordners nur relative Links, wenn Sie auf Dateien in Ihrem Abgabeordner verweisen. Absolute Links sind eigentlich nur für URLs passend.
-* Überprüfen Sie vor der Abgabe, ob die Links im `README.md` funktionieren. Verschieben Sie Ihren Abgabeordner auf Ihrem Rechner an einen anderen Ort im Dateisystem und probieren Sie dann, ob die Links noch funktionieren.
-* Bitte auf gar keinen Fall Dateien abgeben, die das Ergebnis einer Kompilierung der Quellcode-Dateien (bzw. Testcode-Dateien) sind.
-* Wenn Sie Ihr Projekt mit git verwaltet haben, entfernen Sie den meist unsichtbaren Ordner `.git` aus Ihrem Verzeichnis
-* Eine Daumenregel: Wenn Ihre `zip`-Datei mehrere Hundert Kilobyte (KB) groß ist, dann haben Sie vermutlich Dateien mit eingepackt, die nicht zur Abgabe gehören.
-
-Was zeichnet eine gute Dokumentation aus? Lesbarkeit, Verständlichkeit, eine klare Gliederung und Struktur, Korrektheit der Sachinformationen, eine Abwesenheit von Schreib- und Grammatikfehlern. Und: Die Dokumentation soll für fachinformierte Leser*innen geschrieben sein. Hilfreich, erklärend und dennoch auf den Punkt gebracht. Beispiele sind immer gut!
-
-Viel Erfolg!
+* https://git.thm.de/dhzb87/JbX/-/tree/master/TicTacToe (zum versenden und beantworten von http Requests am Beispiel TicTacToe)
+* https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning <br>
+  (Den Pseudocode zum Alphabeta-Algorithmus fast identisch übernommen
+  und darauf aufbauend meinen fertigen Algorithmus geschrieben)
+* https://www.youtube.com/watch?v=OgO1gpXSUzU&t=27s (zur Monte-Carlo-Methode)
+* https://www.youtube.com/watch?v=AyBNnkYrSWY (zur Monte-Carlo-Methode)
+* Herzberg Dominikus, BitBoard.Mühle.png: Erklärung zu Bitboars für Mühle auf Slack, 3.Juli 2020
+* http://zetcode.com/kotlin/writefile/ (zum Schreiben von txt-Dokumenten in Kotlin)
+* https://www.baeldung.com/kotlin-read-file (zum Lesen von txt-Dokumenten in Kotlin)
+* http://library.msri.org/books/Book29/files/gasser.pdf (umfassende Erklärung zur KI für Muehle, wurde genutzt, um
+sich eine grobe Übersicht zu verschaffen)

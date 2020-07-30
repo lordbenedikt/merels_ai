@@ -1,31 +1,34 @@
 package muehle
 
-//import io.javalin.Javalin
-//import io.javalin.core.PathSegment
-//import io.javalin.http.Context
 import kotlin.math.max
 import kotlin.math.min
 import java.io.File
 
 class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
              val phs: Int, val last: Muehle? = null) : MuehleInterface {
-    //n[0...23] represents the nodes
+    //n[0..1] represents the nodes of each color
     //sel is current sel
     //avl is number of remaining rounds of inserting(short for avl)
     //phs is the phase: 1 is insert, 0 is regular, -1 take out
     //last holds the previous game position
+
     companion object {
+
         val hm = HashMap<Long, Int>()
         var countMoves = 0  //calculated Moves in order for AI to make a single choice
         var start = System.currentTimeMillis()
         var calcDuration = 0L
         var maxDepth = 3
-        val timeLimit = -1
+        var autoplay = -1
+        var monteCarlo = false
+        var timeLimit = 3000
+        var displayAlphaBetaEval = false
 
         const val f1: Int = 0b000101010001010100010101
         const val f2: Int = 0b010000000100000001000000
         const val f3: Int = 0b000000000000000010101010
 
+        //24 maps, one for each node, constituting a graph, 0 = UP, 1 = RIGHT, 2 = DOWN, 3 = LEFT
         val paths = arrayOf(mapOf(2 to 7, 1 to 1), mapOf(3 to 0, 2 to 9, 1 to 2), mapOf(3 to 1, 2 to 3),
                 mapOf(0 to 2, 2 to 4, 3 to 11), mapOf(0 to 3, 3 to 5), mapOf(0 to 13, 1 to 4, 3 to 6),
                 mapOf(0 to 7, 1 to 5), mapOf(0 to 0, 1 to 15, 2 to 6), mapOf(1 to 9, 2 to 15),
@@ -34,28 +37,21 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
                 mapOf(0 to 8, 1 to 23, 2 to 14, 3 to 7), mapOf(1 to 17, 2 to 23), mapOf(0 to 9, 1 to 18, 3 to 16),
                 mapOf(2 to 19, 3 to 17), mapOf(0 to 18, 1 to 11, 2 to 20), mapOf(0 to 19, 3 to 21),
                 mapOf(1 to 20, 2 to 13, 3 to 22), mapOf(0 to 23, 1 to 21), mapOf(0 to 16, 2 to 22, 3 to 15))
-//        24 maps, one for each node, constituting a graph, 0 = UP, 1 = RIGHT, 2 = DOWN, 3 = LEFT
 
-//        const val UP = 0
-//        const val RIGHT = 1
-//        const val DOWN = 2
-//        const val LEFT = 3
-//        const val WHITE = 1
-//        const val BLACK = -1
-
-        init {
-            File("src/main/resources/databasePermanent.txt").forEachLine {
+        fun loadDatabase(filename: String) {
+            File("src/main/resources/" + filename).forEachLine {
                 val line = it.split(",")
-                hm.put(line[0].toLong(), line[1].toInt())
+                Muehle.hm.put(line[0].toLong(), line[1].toInt())
             }
         }
+
+        init {
+            loadDatabase("databasePermanent.txt")
+        }
+
     }
 
     val n = IntArray(24)
-//    val allPos = ArrayList<Muehle>()
-//    val possibleNodes = ArrayList<IntArray>()
-//    val m = Muehle(intArrayOf(2), -1, 1, 18, 1, null)
-
     init {
         repeat(24) {
             n[it] = node(it)
@@ -96,17 +92,8 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
     private fun getHash(): Long {
         var res = 0L
 
-        //arrange board, so equivalent constellations will have same hash
-        // --to be implemented--
-
         //number of tokens to insert
         res += avl
-        res = res.shl(4)
-
-//        //current phase
-//        if (phs == -1) res += 2
-//        else res += phs
-//        res = res.shl(2)
 
         //tokens of both players, opponent first
         for (t in intArrayOf(-turn, turn)) {
@@ -156,7 +143,7 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         //returns the winner, if game isn't finished maximum amount of moves returns 0
         var m = this
         var moves = 0
-        while (!m.gameOver() || moves == maxMoves) {
+        while (!m.gameOver() && moves != maxMoves) {
             moves++
             m = m.play(m.randomMove())
         }
@@ -165,16 +152,23 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
     }
 
     override fun monteCarlo(): Int {
-        var samples = 100
+        var maxSamples = 20
+        var countSamples = 0
         var sum = 0
 
         if (gameOver()) return -turn * 100000
 
-        repeat(samples) {
+        //simulates games until either maxSamples is reached oder timeLimit is exceeded
+        while(countSamples < maxSamples) {
+            if (isTimeLimit()) break
             val winner = randomGame(100)
+            println(winner)
             sum += winner * 100000
+            countSamples++
         }
-        return sum / samples
+        println("average of $countSamples samples is ${sum / (if (countSamples==0) 1 else countSamples)}")
+        if (countSamples==0) return 0
+        return sum / countSamples
     }
 
     override fun alphabeta(depth: Int, alpha: Int, beta: Int, maximizingPlayer: Boolean): Int {
@@ -205,9 +199,9 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         var alpha = alpha
         var beta = beta
 
-        if (depth == maxDepth || gameOver()) {
-            val value = heuristicEval()
-//            val value = monteCarlo()
+        if (depth == maxDepth || gameOver() || (isTimeLimit())) {
+            val value = if (!monteCarlo) critEval()
+            else monteCarlo()
             return value * (1 + maxDepth - depth)
         }
 
@@ -243,79 +237,38 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         }
     }
 
-//    fun evaluate(turn: Int, depth: Int): Int {
-//        countMoves++
-//
-//        //generate hashcode
-//        var hash: Long
-//        val depth = if (phs == -1) depth - 1 else depth
-//        var m = this
-//        repeat(2) {
-//            repeat(2) {
-//                repeat(4) {
-//                    hm[m.getHash()]?.let { value ->
-//                        return value * turn
-//                    }
-//                    m = m.turn90()
-//                }
-//                m = m.mirror()
-//            }
-//            m = m.invert()
-//        }
-//
-//        //limit evaluation to prevent overflow
-//        if (gameOver() || depth==maxDepth ||
-//                (timeLimit!=-1 && System.currentTimeMillis()-start > timeLimit))
-//            return turn * heuristicEval()
-//
-//        val next = play(getBestMove(depth + 1))
-//        val hashValue = next.evaluate(next.turn, depth + 1) * turn
-//        println("reached setHash")
-//        setHash(hashValue)
-//        return turn * hashValue
-//    }
-
-    override fun heuristicEval(): Int {
+    override fun critEval(): Int {
         //gameOver:             -100000
         //each token ahead:      +10000
         //each row of 2:          +3000/-2000
         //each row of 1:          +1000/-1000
-        //? each double mill:      +30000 ?
-//        val hashes = getHashes()
-//        hashes.forEach {
-//            hm[it]?.let { value ->
-//                return value * turn
-//            }
-//        }
+
         if (gameOver()) return -100000 * turn
 
         var res = (countByColor(1) - countByColor(-1)) * 10000
 
         var numOfRows = countAllRows(1)
         res += numOfRows[0] * 100
-        res += numOfRows[1] * 3000
+        res += numOfRows[1] * if (turn==1) 3000 else 2000
         numOfRows = countAllRows(-1)
         res -= numOfRows[0] * 100
-        res -= numOfRows[1] * 2000
+        res -= numOfRows[1] * if (turn==-1) 3000 else 2000
 
-        if (avl%2 == 1) res += turn*10000
+        if (avl % 2 == 1) res += turn * 10000
         if (phs == -1 && avl == 0) res += 10000 * turn
         return res
     }
 
-//    fun getBestMove(): Move {
-//
-//        return bestMove
-//    }
-
     override fun undo(): Muehle {
         if (last == null) return this
         if (last.last == null) return last
+        if (autoplay==0) return last
         return last.last
     }
 
     override fun play(m: Move): Muehle {
-        if (m.take == -2) return this     //take = -2 indicates an empty move, nothing is done
+        //take = -2 indicates an empty move, nothing is done
+        if (m.take == -2) return this
 
         val nodesTmp = nodes.copyOf()
         val player = if (turn == 1) 0 else 1
@@ -324,9 +277,11 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         if (m.from != -1) nodesTmp[if (m.to == -1) opponent else player] -= 1.shl(m.from)
         if (m.to == -1) return Muehle(nodesTmp, -1, -turn, avl, if (avl > 1) 1 else 0, this)
         nodesTmp[player] += 1.shl(m.to)
+
         //if included in Move, also take out enemy token
         if (m.take != -1) nodesTmp[opponent] -= 1.shl(m.take)
 
+        //create new instance of Muehle
         var res = Muehle(nodesTmp, -1, -turn, avl - if (avl != 0) 1 else 0, if (avl > 1) 1 else 0, this)
         //if row of three is formed, don't change turn and enter phs -1
         if (m.take == -1)
@@ -347,14 +302,15 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         var bestMove: Move = pM.random()
         var bestVal = -1000000
 
+        //measure amount of calculated positions and time passed
         countMoves = 0
         start = System.currentTimeMillis()
 
+        //choose move with highest value
         pM.forEach {
             val next = play(it)
             val thisVal = noise((if (turn == 1) 1 else -1) * next.alphabeta(1, -1000000, 1000000, next.turn == 1))
-//            val thisVal = noise((if (turn==1) 1 else -1) * next.monteCarlo())
-            println("$it / $thisVal");
+            if (displayAlphaBetaEval) println("$it / $thisVal");    //uncomment to show calculated positions by alphabeta
             if (thisVal > bestVal) {
                 bestMove = it
                 bestVal = thisVal
@@ -440,10 +396,10 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
 
         //Select own Token
         if (phs == 0 && n[node] == turn)
-            return Muehle(nodes, node, turn, avl, phs, this)
+            return Muehle(nodes, node, turn, avl, phs, last)
 
         //Deselect
-        return Muehle(nodes, -1, turn, avl, phs, this)
+        return Muehle(nodes, -1, turn, avl, phs, last)
 
     }
 
@@ -581,9 +537,10 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         }
         val black = countTokens(-1)
         val white = countTokens(1)
-        val eval = heuristicEval()
+        val eval = critEval()
         res += "$sel,$turn," + (if (gameOver()) (if (-turn == 1) 1 else 2) else 0) +
-                ",$phs" + ",$white,$black,$eval,$countMoves,$calcDuration,${hm.size},$maxDepth"
+                ",$phs" + ",$white,$black,$eval,$countMoves,$calcDuration,${hm.size}," +
+                "$maxDepth,$autoplay,$monteCarlo,$timeLimit"
         return res
     }
 
@@ -594,10 +551,10 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
 //        O--------O--------O   turn:
 //        |  O-----O-----O  |   phase:
 //        |  |  O--O--O  |  |   available:
-//        O--O--O     O--O--O   heuristic evaluation:
-//        |  |  O--O--O  |  |
-//        |  O-----O-----O  |
-//        O--------O--------O
+//        O--O--O     O--O--O   evaluation(criteria):
+//        |  |  O--O--O  |  |   rows of 3:
+//        |  O-----O-----O  |   rows of 2:
+//        O--------O--------O   rows of 1:
         val t = CharArray(24)
         n.forEachIndexed { i, it ->
             if (it == -1) t[i] = 'B'
@@ -605,20 +562,15 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
             if (it == 1) t[i] = 'W'
         }
         val numOfRows = countAllRows(turn)
-        return "${t[0]}--------${t[1]}--------${t[2]}   active player: $turn\n" +
+        return "---------------------------------------------------------------\n" +
+                "${t[0]}--------${t[1]}--------${t[2]}   active player: $turn\n" +
                 "|  ${t[8]}-----${t[9]}-----${t[10]}  |   phase: $phs\n" +
                 "|  |  ${t[16]}--${t[17]}--${t[18]}  |  |   available: $avl\n" +
-                "${t[7]}--${t[15]}--${t[23]}     ${t[19]}--${t[11]}--${t[3]}   heuristic evaluation:   ${heuristicEval()}\n" +
+                "${t[7]}--${t[15]}--${t[23]}     ${t[19]}--${t[11]}--${t[3]}   evaluation(criteria):   ${critEval()}\n" +
                 "|  |  ${t[22]}--${t[21]}--${t[20]}  |  |   rows of 3: ${numOfRows[2]}\n" +
                 "|  ${t[14]}-----${t[13]}-----${t[12]}  |   rows of 2: ${numOfRows[1]}\n" +
-                "${t[6]}--------${t[5]}--------${t[4]}   rows of 1: ${numOfRows[0]}\n"
+                "${t[6]}--------${t[5]}--------${t[4]}   rows of 1: ${numOfRows[0]}"
     }
-
-//    fun takable(node: Int): Boolean {
-//        if (n[node] == -turn && (!rowOfThree(node) || isAllMills()))
-//            return true
-//        return false
-//    }
 
     private fun adj(node: Int, dir: Int): Int {
         return if (paths[node].containsKey(dir)) n[paths[node][dir] ?: error("paths[node][dir] is null!")]
@@ -635,14 +587,6 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         return 0
     }
 
-//    fun nodeAsBinary(i: Int, color: Int = 0): Int {
-//        return if (node(i, color) == 1) nodeToBinary(i) else 0
-//    }
-
-    private fun nodeToBinary(i: Int): Int {
-        return 1.shl(i)
-    }
-
     private fun countBits(bits: Int): Int {
         var count = 0
         var tmp = bits
@@ -653,71 +597,6 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         return count
     }
 
-//    fun allPossiblePositions(): List<Muehle> {
-//
-//        var n = IntArray(2)
-//        var avl = 18            //0-18
-//        var phs = 1             //-1, 0, 1
-//        var turn = 1            //-1, 1
-//
-//        for (avl in 0..18) {
-//            for (turn in intArrayOf(-1, 1)) {
-//
-//                    for (color in intArrayOf(-1, 0, 1)) {
-//                        for (node in 0..23) {
-//                        n[node] = color
-//                    }
-//                }
-//            }
-//        }
-//        return allPositions
-//    }
-
-//    fun buildPos() {
-//        possibleNodes.forEach { it ->
-    //all Pos with avl>0
-//            if (it[24] > 0)
-//                for (turn in intArrayOf(-1, 1)) {
-//                    for (phs in intArrayOf(-1, 1))
-//                        allPos.add(Muehle(it.copyOfRange(0, 23), -1, turn, it[24], phs, null))
-//                }
-
-    //all Pos with avl=0
-//            else {
-//                for (turn in intArrayOf(-1, 1)) {
-//                    for (phs in intArrayOf(-1, 0))
-//                        allPos.add(Muehle(it.copyOfRange(0, 23), -1, turn, 0, phs, null))
-//                }
-//            }
-//        }
-//    }
-
-//    fun buildField(n: IntArray, pos: Int, white: Int, black: Int) {
-////        var turn = 1
-////        var avl = 18
-////        var phs = 1
-////        if (pos==24) list.add(Muehle(arrayToBits(n),-1,turn,avl,phs,null))
-//        if (pos == 24) {
-//            possibleNodes.add(intArrayOf(*n, avl, black, white))
-//            return
-//        }
-//
-//        for (avl in 0..1) {
-//            if (white + avl / 2 < 9) {
-//                n[pos] = 1
-//                buildField(n, pos + 1, white + 1, black)
-//            }
-//
-//            if (black + avl / 2 < 9) {
-//                n[pos] = -1
-//                buildField(n, pos + 1, white, black)
-//            }
-//
-//            n[pos] = 0
-//            buildField(n, pos + 1, white, black)
-//        }
-//    }
-
     override fun evaluateRandom(limit: Int) {
         if (limit == 0) return
         alphabeta(1, -1000000, 1000000, turn == 1)
@@ -725,12 +604,11 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         if (!gameOver()) {
             next = play(randomMove())
             next.evaluateRandom(limit - 1)
-        } else heuristicEval()
+        } else critEval()
     }
 
     fun buildEndgame(nodes: IntArray, node: Int, remW: Int, remB: Int, list: ArrayList<IntArray>) {
         if (node == 24) {
-//            if ( !list.contains( intArrayOf(n[1],n[0]) ) )
             list.add(intArrayOf(nodes[0], nodes[1]))
             return
         }
@@ -752,35 +630,29 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
     }
 
     fun endgame() {
+
         //get all positions with 3 tokens each player during endgame
         val positions = ArrayList<IntArray>()
 
         buildEndgame(IntArray(2), 0, 3, 3, positions)
         println(positions.size)
 
-        for (j in 0..26918) {
+        endgame@ for (j in 0..2500) {
             for (i in 0..9) {
                 for (k in 0..9) {
-                    Muehle(positions[j * 100 + i*10 + k], -1, 1, 0, 0).bestMove()
-                    print("${i*10 + k + 1}% ")
-                    if ((i*10 + k + 1) % 10 == 0) println()
+                    if (j*100+i*10+k >= positions.size) break@endgame
+                    Muehle(positions[j * 100 + i * 10 + k], -1, 1, 0, 0).bestMove()
+                    print("${i * 10 + k + 1}% ")
+                    if ((i * 10 + k + 1) % 10 == 0) println()
                 }
                 saveData()
             }
-            saveData()
+            if (j%100==0) saveData()
+            println(j*100)
             println("Finished 100 more! Total of ${(j + 1) * 100} positions!")
         }
+        saveData()
 
-//        val n = IntArray(24)
-//        repeat(6) {
-//            while(true) {
-//                n[it] = (0..23).random()
-//                for(i in (0..(it-1))) {
-//                    if (n[it]==n[i]) continue
-//                    break
-//                }
-//            }
-//        }
     }
 
     override fun buildDatabase() {
@@ -794,18 +666,8 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
 
     override fun saveData() {
         //save HashMap to .txt
-        var fileName = "src/main/resources/databasePermanent.txt"
+        var fileName = "src/main/resources/database.txt"
         var database = File(fileName)
-
-        database.printWriter().use { out ->
-            for (el in hm) {
-                out.println("${el.key},${el.value}")
-            }
-        }
-
-        //backup
-        fileName = "src/main/resources/databasePermanentBackup.txt"
-        database = File(fileName)
 
         database.printWriter().use { out ->
             for (el in hm) {
@@ -815,13 +677,22 @@ class Muehle(val nodes: IntArray, val sel: Int, val turn: Int, val avl: Int,
         println("Saved ${hm.keys.size} entries to database")
     }
 
+    //supporting function is needed, because loadDatabase() is already called in companion object
+    override fun loadData(filename: String) { loadDatabase(filename) }
+
     override fun emptyHashmap() {
         hm.clear()
+    }
+
+    private fun isTimeLimit(): Boolean {
+        return (timeLimit != -1 && System.currentTimeMillis() - start > timeLimit)
     }
 
     private fun noise(value: Int): Int = value + ((0..200).random() - 100)
 
 }
+
+
 
 class Move(val from: Int, val to: Int, val take: Int = -1) {
     override fun toString(): String {
