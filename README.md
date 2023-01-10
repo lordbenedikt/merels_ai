@@ -1,4 +1,7 @@
-# Mühle (PiS, SoSe 2020) 
+# Mühle (PiS, SoSe 2020)
+
+This app can be tested [here](https://merels-ai.herokuapp.com/).
+Die App kann [hier](https://merels-ai.herokuapp.com/) getestet werden.
 
 Autor: Benedikt Jensen, 5302211
 
