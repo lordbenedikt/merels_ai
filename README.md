@@ -1,7 +1,7 @@
 # Mühle (PiS, SoSe 2020)
 
-This app can be tested [here](https://merels-ai.herokuapp.com/).
-Die App kann [hier](https://merels-ai.herokuapp.com/) getestet werden.
+This app is currently not online. To test it locally run 'gradle run' inside the root directory. The app listens on port 7070.
+Die App ist derzeit nicht online. Sie kann mit Ausführen von 'gradle run' innerhalb des Projektverzeichnisses getestet werden. Die App auf Port 7070 erreichbar.
 
 Autor: Benedikt Jensen, 5302211
 
