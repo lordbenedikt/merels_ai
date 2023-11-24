@@ -1,6 +1,6 @@
 # Mühle (PiS, SoSe 2020)
 
-This app is currently not online. To test it locally run 'gradle run' inside the root directory. The app listens on port 7070.
+This app is currently not online. To test it locally run 'gradle run' inside the root directory. The app listens on port 7070.<br>
 Die App ist derzeit nicht online. Sie kann mit Ausführen von 'gradle run' innerhalb des Projektverzeichnisses getestet werden. Die App auf Port 7070 erreichbar.
 
 Autor: Benedikt Jensen, 5302211
